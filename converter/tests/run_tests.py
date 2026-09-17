@@ -55,6 +55,32 @@ def main() -> None:
     br = run(FIXTURES / "hardbreak.md")
     assert "md-br" in br
 
+    under = run(FIXTURES / "underscore_path.md")
+    if "converter/tools/embed_assets.py" not in under:
+        raise SystemExit("path with underscore was mangled")
+    if "foo_bar" not in under:
+        raise SystemExit("snake_case was mangled")
+    if '<em class="md-em">italic</em>' not in under:
+        raise SystemExit("_italic_ did not become em")
+    if '<strong class="md-strong">bold</strong>' not in under:
+        raise SystemExit("__bold__ did not become strong")
+    if "embed<em" in under:
+        raise SystemExit("underscore inside path opened emphasis")
+
+    indented = run(FIXTURES / "indented_code.md")
+    if "md-pre" not in indented or "md-code-block" not in indented:
+        raise SystemExit("indented code missing pre/code_block")
+    if "line one" not in indented or "line two" not in indented:
+        raise SystemExit("indented code lines missing")
+    if "line one line two" in indented:
+        raise SystemExit("indented code merged into paragraph")
+    if "path/with_under/file.py" not in indented:
+        raise SystemExit("indented path with underscore missing")
+    if '<p class="md-p">Before:</p>' not in indented:
+        raise SystemExit("text before indented code mangled")
+    if '<p class="md-p">After.</p>' not in indented:
+        raise SystemExit("text after indented code mangled")
+
     html = run(FIXTURES / "sample.md")
     needed = [
         "md-h1",

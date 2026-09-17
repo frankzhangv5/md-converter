@@ -30,6 +30,7 @@ Markdown 的块结构依赖**行首**、**缩进**、**空行**和**围栏状态
 | `LINE_START` | 每个换行后 | 识别标题 `#`、引用 `>`、列表标记、围栏、表格分隔、水平线 |
 | `INLINE` | 行内内容开始后 | 强调、链接、图片、行内代码、普通文字 |
 | `FENCE` | 打开 \`\`\` 或 ~~~ 后 | 直到闭合围栏，内容全部当字面量 |
+| `INDENT_CODE` | 识别到缩进代码行后 | 连续缩进行（及夹在中间的空行）作字面量 |
 | `CODE_SPAN` | 打开行内 backtick 后 | 直到对等数量的闭合 backtick |
 
 行首空白（0–3 空格 vs ≥4 空格/tab）只在 `LINE_START` 解释：4 空格可能是缩进代码，需与围栏代码一起在文法里消歧，词法层先给出 `INDENT` / `SPACES` 信息。
@@ -57,6 +58,7 @@ Bison `%token` 必须与下表一致。
 | `OL_MARK` | 行首 `digits.` 或 `digits)` + 空白 |
 | `TASK_MARK` | 列表标记后的 `[ ]` / `[x]` / `[X]` |
 | `FENCE_OPEN` / `FENCE_CLOSE` | 行首 ≥3 的 `` ` `` 或 `~`，可带 info string |
+| `INDENT_CODE_LINE` | 行首 ≥4 空格或 tab（CommonMark 缩进代码行；去掉一层缩进后的原文） |
 | `HR` | 行首 ≥3 的 `---` / `***` / `___`（可夹空格） |
 | `PIPE` | `\|`（表格） |
 | `TABLE_SEP` | `\| :--- \| --- \|` 这类分隔行，可在词法合并为单 token，或拆成 `PIPE` + `COLON` + `DASH` |
@@ -113,5 +115,7 @@ Bison `%token` 必须与下表一致。
 ## Notes
 
 GFM 参考：[GitHub Flavored Markdown Spec](https://github.github.com/gfm/)。本项目不追求 100% CommonMark 用例通过；词法以“块标记在行首、行内标记在 INLINE、围栏隔离”为底线。
+
+ASCII 路径/标识符中的 `_`（如 `embed_assets.py`、`foo_bar`）由词法并入 `TEXT`；CJK 或标点后的 `_italic_` 仍作强调定界符。
 
 Setext 标题（`===` / `---` 下划线）与 `HR`、表格分隔冲突，若实现成本高可列入 002 的“暂不支持”。

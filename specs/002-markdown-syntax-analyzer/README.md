@@ -30,12 +30,13 @@ priority: high
 document     → blocks
 blocks       → blocks block | block | ε
 block        → heading | paragraph | list | blockquote
-             | fence | table | hr | blank
+             | fence | indent_code | table | hr | blank
 heading      → ATX inline NEWLINE
 paragraph    → inlines NEWLINE
 list         → list_item+
 blockquote   → BLOCKQUOTE blocks（续行规则可简化：每行都要有 >）
 fence        → FENCE_OPEN fence_body FENCE_CLOSE
+indent_code  → INDENT_CODE_LINE+
 table        → table_row TABLE_SEP table_row+
 inline       → TEXT | strong | em | strike | code_span
              | link | image | autolink | ESCAPE
@@ -83,6 +84,7 @@ ul: list_items {
 | `~~` 删除线 | 是 | GFM |
 | 行内代码 | 是 | |
 | 围栏代码块 + info string | 是 | info 放到 class 或 `data-lang`，见 003 |
+| 缩进代码块（≥4 空格/tab） | 是 | CommonMark；无语言；HTML 同围栏 |
 | 链接 `[text](url)`、图片 `![alt](url)` | 是 | |
 | 自动链接 | 是 | |
 | 无序/有序列表、任务列表 | 是 | GFM task |

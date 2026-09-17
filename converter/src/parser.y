@@ -20,8 +20,8 @@ extern int yylineno;
 
 %define parse.error verbose
 
-/* Paragraph continuation vs next block; link ']' vs atom. Default shift is correct. */
-%expect 21
+/* Paragraph continuation vs next block; indent code line+; link ']' vs atom. Default shift is correct. */
+%expect 22
 
 %union {
     char *str;
@@ -30,7 +30,7 @@ extern int yylineno;
 }
 
 %token NEWLINE BLANK HARD_BREAK
-%token <str> TEXT ESCAPE AUTOLINK FENCE_LINE CODE_SPAN TABLE_SEP
+%token <str> TEXT ESCAPE AUTOLINK FENCE_LINE INDENT_CODE_LINE CODE_SPAN TABLE_SEP
 %token <num> ATX TASK_MARK
 %token <fence> FENCE_OPEN
 %token FENCE_CLOSE
@@ -44,7 +44,7 @@ extern int yylineno;
 %type <str> ul_list ul_items ul_item
 %type <str> ol_list ol_items ol_item
 %type <str> blockquote bq_lines bq_line
-%type <str> fence fence_body
+%type <str> fence fence_body indent_code indent_code_lines
 %type <str> table table_rows table_row cells opt_inlines
 %type <str> inlines piece atoms atom
 %type <str> strong em strike star3 link image dest
@@ -79,6 +79,7 @@ block
     | ol_list
     | blockquote
     | fence
+    | indent_code
     | table
     | HR                { $$ = html_void("hr", NULL); }
     | BLANK             { $$ = str_dup(""); }
@@ -205,6 +206,22 @@ fence_body
             free($1);
             $$ = $2;
         }
+      }
+    ;
+
+indent_code
+    : indent_code_lines {
+        char *esc = html_escape($1);
+        $$ = html_fence("", esc);
+        free($1);
+        free(esc);
+      }
+    ;
+
+indent_code_lines
+    : INDENT_CODE_LINE
+    | indent_code_lines INDENT_CODE_LINE {
+        $$ = str_concat_sep($1, "\n", $2);
       }
     ;
 

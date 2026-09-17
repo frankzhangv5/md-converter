@@ -150,6 +150,30 @@ static int atx_level(const char *s)
 }
 
 static int line_ahead_has(const char *pat);
+
+/* Strip one indent level (4 spaces or 1 tab) and trailing CR/LF. */
+static char *indent_code_text(const char *s)
+{
+    const char *p = s;
+    size_t n;
+    char *out;
+    if (*p == '\t')
+        p++;
+    else {
+        int i;
+        for (i = 0; i < 4 && *p == ' '; i++)
+            p++;
+    }
+    n = strlen(p);
+    while (n && (p[n - 1] == '\n' || p[n - 1] == '\r'))
+        n--;
+    out = (char *)malloc(n + 1);
+    if (!out)
+        die_lex("out of memory");
+    memcpy(out, p, n);
+    out[n] = '\0';
+    return out;
+}
 %}
 
 %option noyywrap yylineno nounistd never-interactive
@@ -157,6 +181,7 @@ static int line_ahead_has(const char *pat);
 %x LINE_START
 %x INLINE
 %x FENCE
+%x INDENT_CODE
 %x IN_TICKS
 %x AFTER_LIST
 %x TABLE
@@ -166,7 +191,10 @@ WS              [ \t]
 NL              \r?\n
 INDENT          {WS}{0,3}
 INDENT1_3       {WS}{1,3}
+INDENT4         ([ ]{4}|\t)
 SPACES          {WS}*
+IC_LINE         {INDENT4}[^\r\n]*{NL}
+IC_EOF          {INDENT4}[^\r\n]*
 
 TICKS           `+
 TICKS3          `{3,}
@@ -199,7 +227,8 @@ HARD_BREAK_ESC  \\{NL}
 ASCII_PUNCT     [\x21-\x2f\x3a-\x40\x5b-\x60\x7b-\x7e]
 ESCAPE_SEQ      \\{ASCII_PUNCT}
 
-WORD_UNDER      [a-zA-Z0-9]+(_[a-zA-Z0-9]+)+
+/* Snake_case / path underscores → TEXT; keep _em_ after CJK/punct working. */
+WORD_UNDER      [a-zA-Z0-9./+-]+(_[a-zA-Z0-9./+-]+)+
 AUTOLINK_ANGLE  "<"https?:\/\/[^>\r\n]+">"
 AUTOLINK_BARE   https?:\/\/[a-zA-Z0-9._~:/?#@!$&'*+,;=%-]+
 PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
@@ -263,9 +292,53 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 
 <LINE_START>{INDENT}/\|                { BEGIN(TABLE); }
 
+<LINE_START>{IC_LINE} {
+    yylval.str = indent_code_text(yytext);
+    BEGIN(INDENT_CODE);
+    return INDENT_CODE_LINE;
+}
+
+<LINE_START>{IC_EOF} {
+    yylval.str = indent_code_text(yytext);
+    BEGIN(INDENT_CODE);
+    return INDENT_CODE_LINE;
+}
+
 <LINE_START>{INDENT1_3}                { /* skip up to 3 spaces */ }
 
 <LINE_START>.                          { yyless(0); BEGIN(INLINE); }
+
+<INDENT_CODE>{IC_LINE} {
+    yylval.str = indent_code_text(yytext);
+    return INDENT_CODE_LINE;
+}
+
+<INDENT_CODE>{IC_EOF} {
+    yylval.str = indent_code_text(yytext);
+    return INDENT_CODE_LINE;
+}
+
+<INDENT_CODE>{SPACES}{NL}/[ ]{4} {
+    yylval.str = sdup("");
+    return INDENT_CODE_LINE;
+}
+
+<INDENT_CODE>{SPACES}{NL}/\t {
+    yylval.str = sdup("");
+    return INDENT_CODE_LINE;
+}
+
+<INDENT_CODE>{SPACES}{NL} {
+    BEGIN(LINE_START);
+    yyless(0);
+}
+
+<INDENT_CODE>. {
+    BEGIN(LINE_START);
+    yyless(0);
+}
+
+<INDENT_CODE><<EOF>>                   { BEGIN(LINE_START); return 0; }
 
 <AFTER_LIST>{TASK_UNCHECKED} {
     yylval.num = 0;
