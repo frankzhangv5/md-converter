@@ -1,0 +1,46 @@
+# Build outputs
+converter/build/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# Flex / Bison generated sources (also under build/)
+lex.yy.c
+parser.tab.c
+parser.tab.h
+parser.output
+y.tab.c
+y.tab.h
+
+# Converter runtime / sample outputs
+converter/out.html
+converter/*.out.html
+converter/README.html
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Misc local
+*.log
+*.tmp
+.cache/

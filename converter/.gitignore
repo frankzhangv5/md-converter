@@ -1,0 +1,8 @@
+build/
+tools/
+*.o
+*.exe
+parser.output
+lex.yy.c
+parser.tab.c
+parser.tab.h

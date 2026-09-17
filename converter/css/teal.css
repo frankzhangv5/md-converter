@@ -1,0 +1,284 @@
+/* teal（兰青）— theme from
+   https://mp.weixin.qq.com/s/rFgg6SKc8FzaShSTWQGh6w
+   Accent: rgb(0, 150, 136) / #009688. Fence uses Visual Studio Dark. */
+
+.md-body {
+  max-width: 677px;
+  margin: 0 auto;
+  padding: 24px 16px 64px;
+  font-family: Optima, "Microsoft YaHei", PingFangSC-regular, "PingFang SC",
+    "Hiragino Sans GB", serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #000000;
+  background: #ffffff;
+  text-align: justify;
+  word-wrap: break-word;
+}
+
+/* 兰青 / 该文未出现的 # ；居中青绿底边 */
+.md-h1 {
+  font-size: 1.8em;
+  font-weight: 700;
+  color: #009688;
+  line-height: 1.4;
+  text-align: center;
+  margin: 1.2em auto 1em;
+  padding: 0 0 0.35em;
+  border: 0;
+  border-bottom: 1px solid #009688;
+}
+
+/* 该文 h2：20px 青绿字 + 3px 左边条 + 左内边距 10px */
+.md-h2 {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  color: #009688;
+  line-height: 1.8em;
+  text-align: left;
+  margin: 30px 0 15px;
+  padding: 0 0 0 10px;
+  border: 0;
+  border-left: 3px solid #009688;
+}
+
+.md-h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #009688;
+  line-height: 1.5em;
+  text-align: left;
+  margin: 0.8em 0 0.5em;
+  padding: 0 0 0 10px;
+  border: 0;
+  border-left: 2px solid #009688;
+}
+
+.md-h4,
+.md-h5,
+.md-h6 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #009688;
+  line-height: 1.5em;
+  text-align: left;
+  margin: 0.7em 0 0.4em;
+  padding: 0 0 0 10px;
+  border: 0;
+  border-left: 1px dotted #009688;
+}
+
+.md-h5,
+.md-h6 {
+  font-weight: 400;
+  color: #777777;
+}
+
+.md-p {
+  margin: 0;
+  padding: 8px 0;
+  min-height: 1em;
+  color: #000000;
+  font-size: 16px;
+  line-height: 1.8em;
+  text-align: justify;
+}
+
+.md-br {
+  display: block;
+  content: "";
+  margin: 0;
+}
+
+.md-a {
+  color: #009688;
+  text-decoration: none;
+  border-bottom: 1px solid #009688;
+}
+
+.md-a:hover {
+  opacity: 0.75;
+}
+
+.md-strong {
+  font-weight: 700;
+  color: #009688;
+}
+
+.md-em { font-style: italic; }
+
+.md-del {
+  text-decoration: line-through;
+  color: #888888;
+}
+
+.md-code {
+  font-family: "Operator Mono", Consolas, Monaco, Menlo, monospace;
+  font-size: 14px;
+  color: #009688;
+  background: rgba(27, 31, 35, 0.05);
+  margin: 0 2px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  word-break: normal;
+}
+
+.md-pre {
+  position: relative;
+  display: flex;
+  background: #1e1e1e;
+  border-radius: 5px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+  padding: 0;
+  overflow: auto;
+  margin: 10px 0;
+  color: #d4d4d4;
+  text-align: left;
+  border: 1px solid #2d2d2d;
+}
+
+.md-line-numbers {
+  flex: 0 0 auto;
+  user-select: none;
+  text-align: right;
+  padding: 16px 12px 15px 16px;
+  background: #1e1e1e;
+  border-right: 1px solid #2d2d2d;
+  color: #858585;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.md-code-block {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  padding: 16px 16px 15px;
+  display: block;
+  white-space: pre;
+  border-radius: 0 5px 5px 0;
+}
+
+/* Visual Studio Dark token palette */
+.md-code-block .md-tok-kw { color: #569cd6; }
+.md-code-block .md-tok-str { color: #ce9178; }
+.md-code-block .md-tok-cmt { color: #6a9955; font-style: italic; }
+.md-code-block .md-tok-num { color: #b5cea8; }
+.md-code-block .md-tok-pre { color: #c586c0; font-weight: 600; }
+
+.md-blockquote {
+  margin: 20px 0;
+  padding: 10px 10px 10px 20px;
+  border: 0;
+  border-left: 3px solid #009688;
+  border-right: 3px solid rgba(0, 150, 136, 0.3);
+  background: rgba(0, 0, 0, 0.05);
+  color: #777777;
+  overflow: auto;
+}
+
+.md-blockquote .md-p {
+  color: #777777;
+  text-align: left;
+}
+
+/* 该文 ol：decimal、padding-left 25px；li 内 16px / 1.8em / 上下 5px */
+.md-ul,
+.md-ol {
+  margin: 8px 0;
+  padding: 0 0 0 25px;
+  color: #000000;
+  list-style-position: outside;
+  text-align: left;
+}
+
+.md-ul { list-style-type: disc; }
+.md-ol { list-style-type: decimal; }
+
+.md-ul .md-ul,
+.md-ol .md-ol,
+.md-ul .md-ol,
+.md-ol .md-ul {
+  margin: 5px 0;
+  padding-left: 25px;
+}
+
+.md-li {
+  margin: 5px 0;
+  padding: 0;
+  color: #010101;
+  font-size: 16px;
+  line-height: 1.8em;
+  font-weight: 400;
+  text-align: left;
+}
+
+.md-li::marker {
+  color: #000000;
+}
+
+.md-task {
+  list-style: none;
+  margin-left: -25px;
+}
+
+.md-checkbox {
+  margin-right: 0.45em;
+  vertical-align: middle;
+  accent-color: #009688;
+}
+
+.md-img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 10px auto;
+  border-radius: 4px;
+}
+
+.md-table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  display: table;
+  font-size: 16px;
+  text-align: left;
+  line-height: 1.5em;
+}
+
+.md-thead { background: #009688; }
+
+.md-th,
+.md-td {
+  border: 1px solid #009688;
+  padding: 5px 10px;
+  min-width: 85px;
+}
+
+.md-th {
+  font-weight: 700;
+  color: #ffffff;
+  background: #009688;
+}
+
+.md-td { color: #000000; }
+
+.md-tbody .md-tr { background: #ffffff; }
+
+.md-align-left { text-align: left; }
+.md-align-center { text-align: center; }
+.md-align-right { text-align: right; }
+
+.md-hr {
+  border: 0;
+  border-top: 1px solid #009688;
+  margin: 2em auto;
+  width: 80%;
+}
