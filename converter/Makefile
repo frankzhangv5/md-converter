@@ -1,4 +1,8 @@
-CC      ?= gcc
+# Make's builtin default is CC=cc; ?= cannot override it. Prefer gcc unless
+# the user/env already set CC (origin != default).
+ifeq ($(origin CC),default)
+  CC := gcc
+endif
 FLEX    ?= flex
 BISON   ?= bison
 PYTHON  ?= python3
