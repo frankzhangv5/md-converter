@@ -5,14 +5,22 @@ ifeq ($(origin CC),default)
 endif
 FLEX    ?= flex
 BISON   ?= bison
-PYTHON  ?= python3
 MSYS    ?= D:/msys64
 
 ifeq ($(OS),Windows_NT)
   EXE := .exe
-  PATH := $(MSYS)/usr/bin;$(MSYS)/mingw64/bin;$(PATH)
+  # Windows installs expose `python`, not `python3` (Store stub often exits 49).
+  PYTHON ?= python
+  # Native Windows make (cmd/powershell): inject MSYS tool paths.
+  # Under MSYS2/MINGW (MSYSTEM set, e.g. CI shell: msys2), PATH is already
+  # correct; rewriting with ';' breaks /mingw64/bin so gcc disappears while
+  # /usr/bin flex/bison still work.
+  ifeq ($(MSYSTEM),)
+    PATH := $(MSYS)/usr/bin;$(MSYS)/mingw64/bin;$(PATH)
+  endif
 else
   EXE :=
+  PYTHON ?= python3
 endif
 
 SRC     := src
