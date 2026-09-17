@@ -193,12 +193,25 @@
 
     var cs = getComputedStyle(liveEl);
     var def = defaultsFor(tag);
+    /*
+     * 公众号有自己的 h1–h6 字号。主题字号若碰巧等于 UA 默认（如 GFM 的
+     * h2:1.5rem ≈ UA 1.5em），会被下面「等于默认则跳过」省略；粘贴后 h2
+     * 吃编辑器小字号、h3 仍带内联，层级会反转。标题字号一律强制写出。
+     */
+    var forceHeadingFontSize =
+      tag === "H1" ||
+      tag === "H2" ||
+      tag === "H3" ||
+      tag === "H4" ||
+      tag === "H5" ||
+      tag === "H6";
     var parts = [];
     var i, prop, val;
     for (i = 0; i < PROPS.length; i++) {
       prop = PROPS[i];
       val = cs.getPropertyValue(prop);
-      if (val === def[prop]) continue;
+      if (val === def[prop] && !(forceHeadingFontSize && prop === "font-size"))
+        continue;
       if (isUseless(prop, val)) continue;
       if (prop === "display") val = wechatDisplay(tag, val);
       /* break-all 会把 --css 拆开；不要用 nowrap/inline-block（会触发 li 首子换行） */

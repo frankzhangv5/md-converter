@@ -33,10 +33,11 @@
     converter/src/lex.l          Flex 词法
     converter/src/parser.y       Bison 文法与 HTML 语义动作
     converter/src/html.c         type → tag/class（yacc 调用）
-    converter/src/main.c         读入、yyparse、写出完整 HTML
-    converter/css/gfm.css        自定义样式（class 与 003 对齐）
-    converter/js/copy-wechat.js  浏览器内「复制到公众号」按钮
-    converter/js/highlight.js    围栏代码高亮（浏览器内联）
+    converter/src/main.c         读入、yyparse、写出完整 HTML（内联 CSS/JS）
+    converter/css/gfm.css        自定义样式（class 与 003 对齐；构建时嵌入）
+    converter/js/copy-wechat.js  浏览器内「复制到公众号」按钮（构建时嵌入）
+    converter/js/highlight.js    围栏代码高亮（构建时嵌入）
+    converter/tools/embed_assets.py  把 css/js 编进 embedded_assets.c
     converter/tests/fixtures/    样例 .md
     converter/Makefile           flex/bison/cc 构建
     converter/build.ps1          Windows 构建

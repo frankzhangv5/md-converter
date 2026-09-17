@@ -20,6 +20,7 @@ converter/
   src/lex.l parser.y html.c html.h main.c
   css/gfm.css teal.css vermillion.css
   js/highlight.js copy-wechat.js
+  tools/embed_assets.py
   tests/fixtures/
   Makefile
   build.ps1
@@ -27,7 +28,7 @@ converter/
 
 ## 构建
 
-需要 `flex`、`bison` 和 C 编译器（`gcc`）。
+需要 `flex`、`bison`、C 编译器（`gcc`）和 `python3`（构建时把 CSS/JS 嵌入二进制）。
 
 ### Ubuntu
 
@@ -63,33 +64,35 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 ## 运行
 
 ```
-./build/md-convert input.md                  # 写出 input.html
+./build/md-convert input.md                  # 写出 input.html（默认 --theme gfm）
 ./build/md-convert input.md -o out.html
-./build/md-convert input.md -o out.html --css css/gfm.css
-./build/md-convert input.md -o out.html --css css/teal.css
-./build/md-convert input.md -o out.html --css css/vermillion.css
-./build/md-convert input.md --no-highlight   # 不引用 highlight.js
-./build/md-convert input.md --no-copy        # 不引用「复制到公众号」按钮
+./build/md-convert input.md -o out.html --theme gfm
+./build/md-convert input.md -o out.html --theme teal
+./build/md-convert input.md -o out.html --theme vermillion
+./build/md-convert input.md -o out.html --css css/my-theme.css   # 自定义 CSS 内联
+./build/md-convert input.md --no-highlight   # 不内联 highlight.js
+./build/md-convert input.md --no-copy        # 不内联「复制到公众号」脚本
 ```
 
-- `--css` 写入 `<link href="...">`（默认 `css/gfm.css`）。
-- `highlight.js` / `copy-wechat.js` 以 `<script src>` 外链写入（默认 `js/...`，与 `--css` 目录同级推导），不内联脚本正文。
-- `teal.css`（#009688）、`vermillion.css`（#f83929）为微信公众号阅读风；多行代码块为 Visual Studio Dark 风格，`md-tok-*` 高亮色写在所选 CSS 里。
+- `--theme` 选用构建时嵌入二进制的主题 CSS（`gfm` / `teal` / `vermillion`），写入 `<style id="md-theme">`。
+- `--css path` 从文件读 CSS 并内联（覆盖 `--theme`）。
+- `highlight.js` / `copy-wechat.js` 同样嵌入二进制，以 `<script>…</script>` **内联**写入；单独拷贝二进制即可，不依赖仓库里的 `css/`、`js/`。
+- `teal`（#009688）、`vermillion`（#f83929）为微信公众号阅读风；多行代码块为 Visual Studio Dark 风格，`md-tok-*` 高亮色写在所选 CSS 里。
 - 未指定 `-o` 时，在输入文件旁写出同名 `.html`（`foo.md` → `foo.html`），不写 stdout。
 
-浏览器打开生成的 HTML 后，右下角有「复制到公众号」：按**当前 CSS 主题**把渲染结果（计算样式内联）写入剪贴板，再粘贴到公众号编辑器。换 `--css` 即换复制样式，无需另导一份 HTML。打开 HTML 时需能访问同路径下的 `js/*.js`（与 CSS 一样）。
+浏览器打开生成的 HTML 后，右下角有「复制到公众号」：按**当前 CSS 主题**把渲染结果（计算样式内联）写入剪贴板，再粘贴到公众号编辑器。换 `--theme` 即换复制样式。HTML 可放在任意目录打开，样式与脚本都已内联。
 
 ## 自定义样式
 
-转换器**不改 HTML 标签名与 class**，只换样式表。换肤有两种方式：
+转换器**不改 HTML 标签名与 class**，只换样式表内容。换肤有两种方式：
 
-1. **选用已有主题**（推荐先试）：
+1. **选用内置主题**（推荐）：
 
    ```
-   ./build/md-convert input.md -o out.html --css css/teal.css
+   ./build/md-convert input.md -o out.html --theme teal
    ```
 
-2. **自己写主题**：复制一份现有 CSS，只改各 `.md-*` 下的属性，不要改 class 名。
+2. **自己写主题**：复制一份现有 CSS，只改各 `.md-*` 下的属性，不要改 class 名，再用 `--css` 内联：
 
    ```
    cp css/gfm.css css/my-theme.css

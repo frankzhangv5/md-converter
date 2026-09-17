@@ -12,7 +12,7 @@ priority: high
 
 转换器的主路径是 **语法引导翻译**，不是先建 AST 再遍历。
 
-`parser.y` 里每个非终结符的语义值是 `char*` HTML 片段。规约时根据产生式 type 调用统一出口，生成 003 规定的 tag + class。完整文档骨架（doctype、`<link>` CSS）由 `main.c` 按 003 包装，yacc 负责 `<body>` 内部。
+`parser.y` 里每个非终结符的语义值是 `char*` HTML 片段。规约时根据产生式 type 调用统一出口，生成 003 规定的 tag + class。完整文档骨架（doctype、内联 `<style>` / `<script>`）由 `main.c` 按 003 包装，yacc 负责 `<body>` 内部。
 
 依赖：[001 词法](../001-markdown-lexical-analyzer/README.md)。class 名以 [003](../003-markdown-html-converter/README.md) 为准。
 

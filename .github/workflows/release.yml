@@ -67,6 +67,7 @@ jobs:
             bison
             make
             mingw-w64-x86_64-gcc
+            python
 
       - name: Build (Unix)
         if: runner.os != 'Windows'

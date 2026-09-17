@@ -100,28 +100,52 @@ def main() -> None:
         raise SystemExit("fixture <script> was not escaped")
     if "<script>alert" in html:
         raise SystemExit("raw <script>alert leaked into body")
-    if 'id="md-highlight"' not in html or 'src="js/highlight.js"' not in html:
+    if 'id="md-highlight"' not in html:
         raise SystemExit("highlighter script missing")
-    if 'id="md-copy-wechat-js"' not in html or 'src="js/copy-wechat.js"' not in html:
+    if 'id="md-copy-wechat-js"' not in html:
         raise SystemExit("copy-wechat script missing")
+    if 'src="js/highlight.js"' in html or 'src="js/copy-wechat.js"' in html:
+        raise SystemExit("JS should be inlined, not linked via src")
+    if 'rel="stylesheet"' in html or "<link " in html:
+        raise SystemExit("CSS should be inlined in <style>, not linked")
+    if 'id="md-theme"' not in html or "<style" not in html:
+        raise SystemExit("theme <style> missing")
+    if ".md-body" not in html:
+        raise SystemExit("default theme CSS not inlined")
+    if "var ALIAS" not in html:
+        raise SystemExit("highlight.js body not inlined")
+    if "var BTN_ID" not in html:
+        raise SystemExit("copy-wechat.js body not inlined")
     if "copy-code.js" in html or 'id="md-copy-code-js"' in html:
-        raise SystemExit("copy-code script should not be linked")
-    if "function ()" in html or "var ALIAS" in html:
-        raise SystemExit("JS should be linked, not inlined")
+        raise SystemExit("copy-code script should not be present")
     if "highlight.css" in html:
         raise SystemExit("highlight.css should not be linked")
     if "# not a heading" not in html and "not a heading" not in html:
         raise SystemExit("fenced code lost body text")
 
+    teal = run(FIXTURES / "sample.md", ["--theme", "teal"])
+    if "#009688" not in teal:
+        raise SystemExit("--theme teal did not inline teal.css")
+    bad = subprocess.run(
+        [str(BIN), str(FIXTURES / "sample.md"), "-o", str(BUILD / "_bad.html"), "--theme", "nope"],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+    )
+    if bad.returncode == 0:
+        raise SystemExit("unknown --theme should fail")
+
     plain = run(FIXTURES / "sample.md", ["--no-highlight"])
     if 'id="md-highlight"' in plain:
-        raise SystemExit("--no-highlight still linked highlighter")
+        raise SystemExit("--no-highlight still inlined highlighter")
     if 'id="md-copy-wechat-js"' not in plain:
         raise SystemExit("--no-highlight removed copy-wechat")
 
     nocopy = run(FIXTURES / "sample.md", ["--no-copy"])
     if 'id="md-copy-wechat-js"' in nocopy:
-        raise SystemExit("--no-copy still linked copy-wechat")
+        raise SystemExit("--no-copy still inlined copy-wechat")
     if 'id="md-highlight"' not in nocopy:
         raise SystemExit("--no-copy removed highlighter")
 

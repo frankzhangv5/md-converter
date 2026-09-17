@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "embedded_assets.h"
 #include "html.h"
 
 extern FILE *yyin;
@@ -12,11 +13,13 @@ int yyparse(void);
 static void usage(const char *argv0)
 {
     fprintf(stderr,
-            "usage: %s input.md [-o out.html] [--css path] [--no-highlight] [--no-copy]\n"
-            "  no -o            writes HTML next to input (foo.md → foo.html)\n"
-            "  --css path       stylesheet href (default: gfm.css; includes code-token colors)\n"
-            "  --no-highlight   skip linking highlight.js\n"
-            "  --no-copy        skip linking copy-wechat.js (复制到公众号 button)\n",
+            "usage: %s input.md [-o out.html] [--theme name] [--css path]\n"
+            "                     [--no-highlight] [--no-copy]\n"
+            "  no -o              writes HTML next to input (foo.md → foo.html)\n"
+            "  --theme name       built-in CSS: gfm (default), teal, vermillion\n"
+            "  --css path         read CSS from file and inline (overrides --theme)\n"
+            "  --no-highlight     skip inlining highlight.js\n"
+            "  --no-copy          skip inlining copy-wechat.js (复制到公众号 button)\n",
             argv0);
 }
 
@@ -57,101 +60,91 @@ static char *default_output_path(const char *input)
     return out;
 }
 
-static int file_exists(const char *path)
+static char *read_file_text(const char *path)
 {
-    FILE *f = fopen(path, "rb");
+    FILE *f;
+    long sz;
+    char *buf;
+    size_t n;
+
+    f = fopen(path, "rb");
     if (!f)
-        return 0;
+        return NULL;
+    if (fseek(f, 0, SEEK_END) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    sz = ftell(f);
+    if (sz < 0) {
+        fclose(f);
+        return NULL;
+    }
+    if (fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        return NULL;
+    }
+    buf = (char *)malloc((size_t)sz + 1);
+    if (!buf) {
+        fclose(f);
+        fprintf(stderr, "md-convert: out of memory\n");
+        exit(1);
+    }
+    n = fread(buf, 1, (size_t)sz, f);
     fclose(f);
-    return 1;
+    buf[n] = '\0';
+    return buf;
 }
 
-static void dirname_copy(const char *path, char *out, size_t cap)
+/* Avoid premature </script> close if JS ever contains that sequence. */
+static char *sanitize_inline_js(const char *js)
 {
-    const char *slash = strrchr(path, '/');
-#ifdef _WIN32
-    const char *bslash = strrchr(path, '\\');
-    if (!slash || (bslash && bslash > slash))
-        slash = bslash;
-#endif
-    if (!slash) {
-        snprintf(out, cap, ".");
-        return;
+    const char *p;
+    const char *needle = "</script>";
+    size_t needle_len = 9;
+    size_t extra = 0;
+    char *out;
+    char *w;
+
+    if (!js)
+        return str_dup("");
+    for (p = js; (p = strstr(p, needle)) != NULL; p += needle_len)
+        extra += 1; /* insert one '\' before '/' */
+    out = (char *)malloc(strlen(js) + extra + 1);
+    if (!out) {
+        fprintf(stderr, "md-convert: out of memory\n");
+        exit(1);
     }
-    if (slash == path) {
-        snprintf(out, cap, "/");
-        return;
+    w = out;
+    for (p = js; *p;) {
+        if (strncmp(p, needle, needle_len) == 0) {
+            memcpy(w, "<\\/script>", 10);
+            w += 10;
+            p += needle_len;
+        } else {
+            *w++ = *p++;
+        }
     }
-    {
-        size_t n = (size_t)(slash - path);
-        if (n >= cap)
-            n = cap - 1;
-        memcpy(out, path, n);
-        out[n] = '\0';
-    }
+    *w = '\0';
+    return out;
 }
 
-/* Browser-relative src, derived like --css href (not absolute filesystem paths). */
-static char *resolve_js_src(const char *css_href, const char *argv0, const char *name)
-{
-    char dir[1024];
-    char parent[1024];
-    char buf[1200];
-    char href[1200];
-
-    dirname_copy(css_href ? css_href : "gfm.css", dir, sizeof(dir));
-
-    /* Same directory as the stylesheet. */
-    if (strcmp(dir, ".") == 0)
-        snprintf(buf, sizeof(buf), "%s", name);
-    else
-        snprintf(buf, sizeof(buf), "%s/%s", dir, name);
-    if (file_exists(buf))
-        return str_dup(buf);
-
-    /* Sibling js/ next to the css/ directory: css/gfm.css → js/name. */
-    if (strcmp(dir, ".") != 0) {
-        dirname_copy(dir, parent, sizeof(parent));
-        if (strcmp(parent, ".") == 0)
-            snprintf(href, sizeof(href), "js/%s", name);
-        else
-            snprintf(href, sizeof(href), "%s/js/%s", parent, name);
-        if (file_exists(href))
-            return str_dup(href);
-    }
-
-    snprintf(href, sizeof(href), "js/%s", name);
-    if (file_exists(href))
-        return str_dup(href);
-
-    dirname_copy(argv0 ? argv0 : ".", dir, sizeof(dir));
-    snprintf(buf, sizeof(buf), "%s/../js/%s", dir, name);
-    if (file_exists(buf))
-        return str_dup(href);
-
-    snprintf(buf, sizeof(buf), "converter/js/%s", name);
-    if (file_exists(buf))
-        return str_dup(buf);
-
-    return NULL;
-}
-
-static char *script_src_tag(const char *id, const char *src)
+static char *script_inline_tag(const char *id, const char *js)
 {
     size_t n;
     char *out;
-    char *esrc;
-    if (!src || !src[0])
+    char *safe;
+
+    if (!js || !js[0])
         return str_dup("");
-    esrc = html_escape(src);
-    n = strlen(id) + strlen(esrc) + 64;
+    safe = sanitize_inline_js(js);
+    n = strlen(id) + strlen(safe) + 64;
     out = (char *)malloc(n);
     if (!out) {
         fprintf(stderr, "md-convert: out of memory\n");
         exit(1);
     }
-    snprintf(out, n, "  <script id=\"%s\" src=\"%s\"></script>\n", id, esrc);
-    free(esrc);
+    snprintf(out, n, "  <script id=\"%s\">\n%s\n  </script>\n", id, safe);
+    free(safe);
     return out;
 }
 
@@ -160,15 +153,16 @@ int main(int argc, char **argv)
     const char *input = NULL;
     const char *output = NULL;
     char *output_owned = NULL;
-    const char *css = "gfm.css";
+    const char *theme = "gfm";
+    const char *css_path = NULL;
+    char *css_owned = NULL;
+    const char *css_text;
     int highlight = 1;
     int copy_btn = 1;
     FILE *in;
     FILE *out;
     char *title;
     char *doc;
-    char *hl_src = NULL;
-    char *copy_src = NULL;
     char *scripts;
     char *s1;
     char *s2;
@@ -181,12 +175,18 @@ int main(int argc, char **argv)
                 return 2;
             }
             output = argv[++i];
+        } else if (strcmp(argv[i], "--theme") == 0) {
+            if (i + 1 >= argc) {
+                usage(argv[0]);
+                return 2;
+            }
+            theme = argv[++i];
         } else if (strcmp(argv[i], "--css") == 0) {
             if (i + 1 >= argc) {
                 usage(argv[0]);
                 return 2;
             }
-            css = argv[++i];
+            css_path = argv[++i];
         } else if (strcmp(argv[i], "--no-highlight") == 0) {
             highlight = 0;
         } else if (strcmp(argv[i], "--no-copy") == 0) {
@@ -215,9 +215,29 @@ int main(int argc, char **argv)
         output = output_owned;
     }
 
+    if (css_path) {
+        css_owned = read_file_text(css_path);
+        if (!css_owned) {
+            perror(css_path);
+            free(output_owned);
+            return 1;
+        }
+        css_text = css_owned;
+    } else {
+        css_text = md_theme_css(theme);
+        if (!css_text) {
+            fprintf(stderr,
+                    "md-convert: unknown theme '%s' (use gfm, teal, or vermillion)\n",
+                    theme);
+            free(output_owned);
+            return 2;
+        }
+    }
+
     in = fopen(input, "rb");
     if (!in) {
         perror(input);
+        free(css_owned);
         free(output_owned);
         return 1;
     }
@@ -225,6 +245,7 @@ int main(int argc, char **argv)
 
     if (yyparse() != 0 || !g_parse_ok) {
         fclose(in);
+        free(css_owned);
         free(output_owned);
         return 1;
     }
@@ -234,35 +255,18 @@ int main(int argc, char **argv)
     if (!title)
         title = html_filename_title(input);
 
-    if (highlight) {
-        hl_src = resolve_js_src(css, argv[0], "highlight.js");
-        if (!hl_src) {
-            fprintf(stderr,
-                    "md-convert: warning: highlight.js not found; "
-                    "token classes will not be applied in the browser\n");
-        }
-    }
-
-    if (copy_btn) {
-        copy_src = resolve_js_src(css, argv[0], "copy-wechat.js");
-        if (!copy_src) {
-            fprintf(stderr,
-                    "md-convert: warning: copy-wechat.js not found; "
-                    "复制到公众号 button will be missing\n");
-        }
-    }
-
-    s1 = script_src_tag("md-highlight", hl_src ? hl_src : "");
-    s2 = script_src_tag("md-copy-wechat-js", copy_src ? copy_src : "");
+    s1 = highlight ? script_inline_tag("md-highlight", md_js_highlight)
+                   : str_dup("");
+    s2 = copy_btn ? script_inline_tag("md-copy-wechat-js", md_js_copy_wechat)
+                  : str_dup("");
     scripts = str_concat(s1, s2);
 
-    doc = html_document(title, css, g_body ? g_body : "", scripts);
+    doc = html_document(title, css_text, g_body ? g_body : "", scripts);
     free(scripts);
     free(title);
     free(g_body);
     g_body = NULL;
-    free(hl_src);
-    free(copy_src);
+    free(css_owned);
 
     out = fopen(output, "wb");
     if (!out) {

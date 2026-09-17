@@ -25,7 +25,8 @@ char *html_image(const char *src, const char *alt);
 char *html_checkbox(int checked);
 char *html_table(char *header_row, const char *aligns, char *body_rows);
 
-char *html_document(const char *title, const char *css_href, const char *body,
+/* css_text: stylesheet body inlined into <style>; extra_js: ready <script> tags. */
+char *html_document(const char *title, const char *css_text, const char *body,
                     const char *extra_js);
 char *html_plain(const char *html);
 char *html_first_h1_text(const char *body);

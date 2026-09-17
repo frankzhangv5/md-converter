@@ -25,7 +25,7 @@ priority: high
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>...</title>
-  <link rel="stylesheet" href="gfm.css">
+  <style id="md-theme">…embedded or --css body…</style>
 </head>
 <body class="md-body">
   ... yacc 返回的片段 ...
@@ -33,7 +33,8 @@ priority: high
 </html>
 ```
 
-- `--css` 默认 `gfm.css`（含代码块背景与 `md-tok-*` 高亮色）
+- `--theme` 选择内置 CSS（`gfm` 默认，另有 `teal` / `vermillion`）；构建时把 `css/*.css` 与 `js/*.js` 编进二进制
+- `--css path` 读入外部 CSS 并**内联**进 `<style>`（覆盖 `--theme`）
 - 标题：第一个 `h1` 文本，否则文件名
 - 失败：非 0 退出，不写半截 HTML
 
@@ -103,12 +104,16 @@ yacc 的 `html_tag(type, inner)` 只允许使用下表。class 前缀 `md-`，�
 ### CLI（建议）
 
 ```
-md-convert input.md [-o out.html] [--css path] [--no-highlight] [--no-copy]
+md-convert input.md [-o out.html] [--theme name] [--css path] [--no-highlight] [--no-copy]
 ```
 
 未指定 `-o` 时写出与输入同路径、扩展名为 `.html` 的文件（`input.md` → `input.html`），不写 stdout。
 
-围栏代码高亮：token 颜色写在 `gfm.css` 的 `.md-pre` / `.md-code-block` 旁；文档通过 `<script src>` 引用 `js/highlight.js`（认 `md-lang-*`），路径相对 HTML，与 `--css` 同级推导（`css/gfm.css` → `js/highlight.js`）。`--no-highlight` 不写入该脚本。`--css` 换肤时背景与高亮色一起换。不改 yacc 产出的 tag。
+内置主题（`--theme`，默认 `gfm`）：`gfm` / `teal` / `vermillion`，对应 `css/*.css`，构建时嵌入二进制。`--css path` 从文件读 CSS 并内联，覆盖 `--theme`。
+
+围栏代码高亮：token 颜色写在主题 CSS 的 `.md-pre` / `.md-code-block` 旁；文档把嵌入的 `highlight.js` **内联**为 `<script id="md-highlight">…</script>`（认 `md-lang-*`）。`--no-highlight` 不写入该脚本。换肤时背景与高亮色一起换。不改 yacc 产出的 tag。
+
+「复制到公众号」脚本同样内联（`id="md-copy-wechat-js"`）；`--no-copy` 关闭。生成 HTML **不依赖**外部 `css/`、`js/` 路径，单独分发二进制即可。
 
 文档外壳：`body.md-body` 内包一层 `<div id="md-article">`（yacc 片段放其中），便于脚本选取正文。
 
@@ -119,7 +124,7 @@ md-convert input.md [-o out.html] [--css path] [--no-highlight] [--no-copy]
 ## Plan
 
 - [x] 把 type 映射做成 `html_tag()` 查表（`converter/src/html.c`）
-- [x] `main.c` 包装完整 HTML，注入 CSS 路径
+- [x] `main.c` 包装完整 HTML，内联 CSS / JS（`--theme` / `--css`）
 - [x] 编写 `converter/css/gfm.css`
 - [x] 文本与属性转义
 - [x] fixtures：标题/列表/代码/表格/链接 对照 class
@@ -128,7 +133,7 @@ md-convert input.md [-o out.html] [--css path] [--no-highlight] [--no-copy]
 
 - [x] 每个 v1 type 至少出现一次，class 与表一致（`tests/run_tests.py`）
 - [x] `<script>` 写成转义文本
-- [x] `--css` 只改 href，class 不变
+- [x] `--theme` / `--css` 只换样式内容，class 不变
 - [x] 空输入：合法 HTML，`body.md-body` 为空
 
 ## Notes

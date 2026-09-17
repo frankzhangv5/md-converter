@@ -503,18 +503,18 @@ char *html_table(char *header_row, const char *aligns, char *body_rows)
     return table;
 }
 
-char *html_document(const char *title, const char *css_href, const char *body,
+char *html_document(const char *title, const char *css_text, const char *body,
                     const char *extra_js)
 {
     char *et = html_escape(title ? title : "");
-    char *ecss = html_escape(css_href ? css_href : "gfm.css");
+    const char *css = css_text ? css_text : "";
     const char *b = body ? body : "";
     const char *ej = extra_js ? extra_js : "";
     char *out;
     size_t n;
 
-    /* extra_js: already-wrapped <script src> tags from main (highlight / copy-wechat). */
-    n = strlen(et) + strlen(ecss) + strlen(b) + strlen(ej) + 512;
+    /* css_text inlined; extra_js: already-wrapped <script>…</script> from main. */
+    n = strlen(et) + strlen(css) + strlen(b) + strlen(ej) + 512;
     out = xmalloc(n);
     snprintf(out, n,
              "<!DOCTYPE html>\n"
@@ -523,7 +523,9 @@ char *html_document(const char *title, const char *css_href, const char *body,
              "  <meta charset=\"utf-8\">\n"
              "  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
              "  <title>%s</title>\n"
-             "  <link rel=\"stylesheet\" href=\"%s\">\n"
+             "  <style id=\"md-theme\">\n"
+             "%s"
+             "  </style>\n"
              "</head>\n"
              "<body class=\"md-body\">\n"
              "<div id=\"md-article\">\n"
@@ -532,9 +534,8 @@ char *html_document(const char *title, const char *css_href, const char *body,
              "%s"
              "</body>\n"
              "</html>\n",
-             et, ecss, b, ej);
+             et, css, b, ej);
     free(et);
-    free(ecss);
     return out;
 }
 
