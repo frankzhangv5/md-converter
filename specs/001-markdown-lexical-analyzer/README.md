@@ -116,6 +116,8 @@ Bison `%token` 必须与下表一致。
 
 GFM 参考：[GitHub Flavored Markdown Spec](https://github.github.com/gfm/)。本项目不追求 100% CommonMark 用例通过；词法以“块标记在行首、行内标记在 INLINE、围栏隔离”为底线。
 
-ASCII 路径/标识符中的 `_`（如 `embed_assets.py`、`foo_bar`）由词法并入 `TEXT`；CJK 或标点后的 `_italic_` 仍作强调定界符。
+ASCII 路径/标识符中的 `_`（如 `embed_assets.py`、`foo_bar`）由词法并入 `TEXT`。当 `PLAIN_TEXT` 从 CJK/标点一路扫到标识符时，可能在 `_` 前停下；此时用**两侧均为 word 字符**（`[A-Za-z0-9_]`）判定为词内下划线，仍发 `TEXT`，避免把 `列表：UL_MARK`、`block_image` 误开成强调。CJK 或标点后的 `_italic_` 仍作强调定界符。
+
+未成对的 `*` / `**` / `***` / `~~` / `_` / `__`：若本行前方没有闭合标记则发 `TEXT`；已发出开标记后，同行的下一个同形标记一律当闭合（不依赖二次前瞻），以免 `**bold**` 的闭侧被误判。紧挨 `-` / `_` / 字母数字的单独 `*`（如 `md-*`、`html_*`）不作为强调开符号；`~~~` 不作为 `~~` 删除线开符号。
 
 Setext 标题（`===` / `---` 下划线）与 `HR`、表格分隔冲突，若实现成本高可列入 002 的“暂不支持”。

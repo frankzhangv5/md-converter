@@ -18,7 +18,7 @@
 ```
 converter/
   src/lex.l parser.y html.c html.h main.c
-  css/gfm.css teal.css vermillion.css
+  css/gfm.css teal.css vermillion.css azure.css lime.css jade.css tangerine.css
   js/highlight.js copy-wechat.js
   tools/embed_assets.py
   tests/fixtures/
@@ -65,20 +65,27 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 
 ```
 ./build/md-convert input.md                  # 写出 input.html（默认 --theme gfm）
-./build/md-convert input.md -o out.html
-./build/md-convert input.md -o out.html --theme gfm
-./build/md-convert input.md -o out.html --theme teal
-./build/md-convert input.md -o out.html --theme vermillion
-./build/md-convert input.md -o out.html --css css/my-theme.css   # 自定义 CSS 内联
+./build/md-convert input.md -o outdir        # 写出 outdir/input.html
+./build/md-convert -d docs                   # 转换 docs/ 下全部 *.md → 同目录 .html
+./build/md-convert -d docs -o site           # 转换 docs/*.md → site/*.html
+./build/md-convert input.md -o outdir --theme gfm
+./build/md-convert input.md -o outdir --theme teal
+./build/md-convert input.md -o outdir --theme vermillion
+./build/md-convert input.md -o outdir --theme azure
+./build/md-convert input.md -o outdir --theme lime
+./build/md-convert input.md -o outdir --theme jade
+./build/md-convert input.md -o outdir --theme tangerine
+./build/md-convert input.md -o outdir --css css/my-theme.css   # 自定义 CSS 内联
 ./build/md-convert input.md --no-highlight   # 不内联 highlight.js
 ./build/md-convert input.md --no-copy        # 不内联「复制到公众号」脚本
 ```
 
-- `--theme` 选用构建时嵌入二进制的主题 CSS（`gfm` / `teal` / `vermillion`），写入 `<style id="md-theme">`。
+- `-d` / `--dir` 扫描目录中所有 `.md`（不递归），与单文件参数二选一。
+- `-o` 为**输出目录**；HTML 文件名取输入 basename（`foo.md` → `foo.html`）。未指定时写到输入文件同目录。
+- `--theme` 选用构建时嵌入二进制的主题 CSS（`gfm` / `teal` / `vermillion` / `azure` / `lime` / `jade` / `tangerine`），写入 `<style id="md-theme">`。
 - `--css path` 从文件读 CSS 并内联（覆盖 `--theme`）。
 - `highlight.js` / `copy-wechat.js` 同样嵌入二进制，以 `<script>…</script>` **内联**写入；单独拷贝二进制即可，不依赖仓库里的 `css/`、`js/`。
-- `teal`（#009688）、`vermillion`（#f83929）为微信公众号阅读风；多行代码块为 Visual Studio Dark 风格，`md-tok-*` 高亮色写在所选 CSS 里。
-- 未指定 `-o` 时，在输入文件旁写出同名 `.html`（`foo.md` → `foo.html`），不写 stdout。
+- `teal`（#009688）、`vermillion`（#f83929）为微信公众号阅读风；`azure`（#415FFF）、`lime`（#006B33）、`jade`（#07C160）、`tangerine`（#FF6A00）为基于 `gfm` 排版的强调色变体；多行代码块均为 Visual Studio Dark，`md-tok-*` 高亮色写在所选 CSS 里。
 
 浏览器打开生成的 HTML 后，右下角有「复制到公众号」：按**当前 CSS 主题**把渲染结果（计算样式内联）写入剪贴板，再粘贴到公众号编辑器。换 `--theme` 即换复制样式。HTML 可放在任意目录打开，样式与脚本都已内联。
 
@@ -89,7 +96,7 @@ powershell -ExecutionPolicy Bypass -File build.ps1
 1. **选用内置主题**（推荐）：
 
    ```
-   ./build/md-convert input.md -o out.html --theme teal
+   ./build/md-convert input.md -o outdir --theme teal
    ```
 
 2. **自己写主题**：复制一份现有 CSS，只改各 `.md-*` 下的属性，不要改 class 名，再用 `--css` 内联：
@@ -97,7 +104,7 @@ powershell -ExecutionPolicy Bypass -File build.ps1
    ```
    cp css/gfm.css css/my-theme.css
    # 编辑 my-theme.css 里的颜色、字体、边距等
-   ./build/md-convert input.md -o out.html --css css/my-theme.css
+   ./build/md-convert input.md -o outdir --css css/my-theme.css
    ```
 
 注意：

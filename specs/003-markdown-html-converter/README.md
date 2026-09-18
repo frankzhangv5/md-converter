@@ -33,7 +33,7 @@ priority: high
 </html>
 ```
 
-- `--theme` 选择内置 CSS（`gfm` 默认，另有 `teal` / `vermillion`）；构建时把 `css/*.css` 与 `js/*.js` 编进二进制
+- `--theme` 选择内置 CSS（`gfm` 默认，另有 `teal` / `vermillion` / `azure` / `lime` / `jade` / `tangerine`）；构建时把 `css/*.css` 与 `js/*.js` 编进二进制
 - `--css path` 读入外部 CSS 并**内联**进 `<style>`（覆盖 `--theme`）
 - 标题：第一个 `h1` 文本，否则文件名
 - 失败：非 0 退出，不写半截 HTML
@@ -104,12 +104,15 @@ yacc 的 `html_tag(type, inner)` 只允许使用下表。class 前缀 `md-`，�
 ### CLI（建议）
 
 ```
-md-convert input.md [-o out.html] [--theme name] [--css path] [--no-highlight] [--no-copy]
+md-convert input.md [-o outdir] [--theme name] [--css path] [--no-highlight] [--no-copy]
+md-convert -d indir [-o outdir] [--theme name] [--css path] [--no-highlight] [--no-copy]
 ```
 
-未指定 `-o` 时写出与输入同路径、扩展名为 `.html` 的文件（`input.md` → `input.html`），不写 stdout。
+- `-d` / `--dir indir`：转换 `indir` 下所有 `*.md`（不递归子目录）；与单文件 `input.md` 二选一。
+- `-o outdir`：输出**目录**；每个输入写出 `outdir/<basename>.html`。
+- 未指定 `-o` 时写出与输入同目录、扩展名为 `.html` 的文件（`path/foo.md` → `path/foo.html`），不写 stdout。
 
-内置主题（`--theme`，默认 `gfm`）：`gfm` / `teal` / `vermillion`，对应 `css/*.css`，构建时嵌入二进制。`--css path` 从文件读 CSS 并内联，覆盖 `--theme`。
+内置主题（`--theme`，默认 `gfm`）：`gfm` / `teal` / `vermillion` / `azure` / `lime` / `jade` / `tangerine`，对应 `css/*.css`，构建时嵌入二进制。`--css path` 从文件读 CSS 并内联，覆盖 `--theme`。
 
 围栏代码高亮：token 颜色写在主题 CSS 的 `.md-pre` / `.md-code-block` 旁；文档把嵌入的 `highlight.js` **内联**为 `<script id="md-highlight">…</script>`（认 `md-lang-*`）。`--no-highlight` 不写入该脚本。换肤时背景与高亮色一起换。不改 yacc 产出的 tag。
 

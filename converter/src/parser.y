@@ -87,7 +87,13 @@ block
 
 heading
     : ATX inlines NEWLINE { $$ = html_heading($1, $2); free($2); }
+    | ATX inlines HARD_BREAK {
+        char *body = str_concat($2, html_void("br", NULL));
+        $$ = html_heading($1, body);
+        free(body);
+      }
     | ATX NEWLINE         { $$ = html_heading($1, ""); }
+    | ATX HARD_BREAK      { $$ = html_heading($1, ""); }
     ;
 
 paragraph
@@ -118,12 +124,27 @@ ul_item
         $$ = html_tag("li", $2);
         free($2);
       }
+    | UL_MARK inlines HARD_BREAK {
+        char *inner = str_concat($2, html_void("br", NULL));
+        $$ = html_tag("li", inner);
+        free(inner);
+      }
     | UL_MARK TASK_MARK inlines NEWLINE {
         char *inner = str_concat_sep(html_checkbox($2), " ", $3);
         $$ = html_tag("task_item", inner);
         free(inner);
       }
+    | UL_MARK TASK_MARK inlines HARD_BREAK {
+        char *inner = str_concat_sep(html_checkbox($2), " ", $3);
+        char *with_br = str_concat(inner, html_void("br", NULL));
+        $$ = html_tag("task_item", with_br);
+        free(inner);
+        free(with_br);
+      }
     | UL_MARK NEWLINE {
+        $$ = html_tag("li", "");
+      }
+    | UL_MARK HARD_BREAK {
         $$ = html_tag("li", "");
       }
     ;
@@ -142,12 +163,27 @@ ol_item
         $$ = html_tag("li", $2);
         free($2);
       }
+    | OL_MARK inlines HARD_BREAK {
+        char *inner = str_concat($2, html_void("br", NULL));
+        $$ = html_tag("li", inner);
+        free(inner);
+      }
     | OL_MARK TASK_MARK inlines NEWLINE {
         char *inner = str_concat_sep(html_checkbox($2), " ", $3);
         $$ = html_tag("task_item", inner);
         free(inner);
       }
+    | OL_MARK TASK_MARK inlines HARD_BREAK {
+        char *inner = str_concat_sep(html_checkbox($2), " ", $3);
+        char *with_br = str_concat(inner, html_void("br", NULL));
+        $$ = html_tag("task_item", with_br);
+        free(inner);
+        free(with_br);
+      }
     | OL_MARK NEWLINE {
+        $$ = html_tag("li", "");
+      }
+    | OL_MARK HARD_BREAK {
         $$ = html_tag("li", "");
       }
     ;
@@ -171,11 +207,24 @@ bq_line
         $$ = html_tag("p", $2);
         free($2);
       }
+    | bq_prefix inlines HARD_BREAK {
+        char *body = str_concat($2, html_void("br", NULL));
+        $$ = html_tag("p", body);
+        free(body);
+      }
     | bq_prefix ATX inlines NEWLINE {
         $$ = html_heading($2, $3);
         free($3);
       }
+    | bq_prefix ATX inlines HARD_BREAK {
+        char *body = str_concat($3, html_void("br", NULL));
+        $$ = html_heading($2, body);
+        free(body);
+      }
     | bq_prefix ATX NEWLINE {
+        $$ = html_heading($2, "");
+      }
+    | bq_prefix ATX HARD_BREAK {
         $$ = html_heading($2, "");
       }
     | bq_prefix UL_MARK inlines NEWLINE {
@@ -184,7 +233,15 @@ bq_line
         free($3);
         free(li);
       }
+    | bq_prefix UL_MARK inlines HARD_BREAK {
+        char *inner = str_concat($3, html_void("br", NULL));
+        char *li = html_tag("li", inner);
+        $$ = html_tag("ul", li);
+        free(inner);
+        free(li);
+      }
     | bq_prefix NEWLINE { $$ = str_dup(""); }
+    | bq_prefix HARD_BREAK { $$ = str_dup(""); }
     ;
 
 fence
@@ -246,6 +303,7 @@ table_rows
 
 table_row
     : PIPE cells NEWLINE { $$ = $2; }
+    | PIPE cells HARD_BREAK { $$ = $2; }
     ;
 
 cells

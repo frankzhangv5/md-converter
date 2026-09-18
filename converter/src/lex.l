@@ -15,6 +15,15 @@ static int tick_len;
 static int saved_state;
 static int eof_newline_sent;
 static int eof_fence_closed;
+/* Last char of previous inline token; used for word-internal '_' flanking. */
+static int prev_char = '\n';
+/* Unmatched inline delimiter opens on the current line (closer bypasses lookahead). */
+static int star_open;
+static int star2_open;
+static int star3_open;
+static int under_open;
+static int under2_open;
+static int tilde2_open;
 
 static char *sbuf;
 static size_t sbuf_len;
@@ -150,6 +159,10 @@ static int atx_level(const char *s)
 }
 
 static int line_ahead_has(const char *pat);
+static void note_text(const char *s);
+static int word_char(int c);
+static int take_delim(int *open_flag, const char *lit, const char *close_pat, int tok);
+static void reset_inline_delims(void);
 
 /* Strip one indent level (4 spaces or 1 tab) and trailing CR/LF. */
 static char *indent_code_text(const char *s)
@@ -407,21 +420,28 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 }
 
 <INLINE,TABLE>{HARD_BREAK_SP} {
+    reset_inline_delims();
+    prev_char = '\n';
     BEGIN(LINE_START);
     return HARD_BREAK;
 }
 
 <INLINE,TABLE>{HARD_BREAK_ESC} {
+    reset_inline_delims();
+    prev_char = '\n';
     BEGIN(LINE_START);
     return HARD_BREAK;
 }
 
 <INLINE,TABLE>[ ] {
     yylval.str = sdup(" ");
+    prev_char = ' ';
     return TEXT;
 }
 
 <INLINE,TABLE>{NL} {
+    reset_inline_delims();
+    prev_char = '\n';
     BEGIN(LINE_START);
     return NEWLINE;
 }
@@ -429,19 +449,61 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 <INLINE,TABLE>{ESCAPE_SEQ} {
     char tmp[2] = { yytext[1], '\0' };
     yylval.str = sdup(tmp);
+    prev_char = (unsigned char)tmp[0];
     return ESCAPE;
 }
 
-<INLINE,TABLE>"***"                    { return STAR3; }
-<INLINE,TABLE>"**"                     { return STAR2; }
-<INLINE,TABLE>"*"                      { return STAR; }
-<INLINE,TABLE>"__"                     { return UNDER2; }
+<INLINE,TABLE>"***"                    { return take_delim(&star3_open, "***", "***", STAR3); }
+<INLINE,TABLE>"**"                     { return take_delim(&star2_open, "**", "**", STAR2); }
+<INLINE,TABLE>"*" {
+    /* Glob-like md-* / html_*: do not open em across the line. */
+    if (!star_open && (word_char(prev_char) || prev_char == '-' || prev_char == '_')) {
+        yylval.str = sdup("*");
+        note_text("*");
+        return TEXT;
+    }
+    return take_delim(&star_open, "*", "*", STAR);
+}
+<INLINE,TABLE>"__" {
+    int nxt = input();
+    if (nxt != EOF)
+        unput((unsigned char)nxt);
+    if (word_char(prev_char) && word_char(nxt)) {
+        yylval.str = sdup("__");
+        prev_char = '_';
+        return TEXT;
+    }
+    return take_delim(&under2_open, "__", "__", UNDER2);
+}
 <INLINE,TABLE>{WORD_UNDER} {
     yylval.str = sdup(yytext);
+    note_text(yytext);
     return TEXT;
 }
-<INLINE,TABLE>"_"                      { return UNDER; }
-<INLINE,TABLE>"~~"                     { return TILDE2; }
+<INLINE,TABLE>"_" {
+    int nxt = input();
+    if (nxt != EOF)
+        unput((unsigned char)nxt);
+    /* snake_case after CJK/punct: PLAIN_TEXT may stop before '_'. */
+    if (word_char(prev_char) && word_char(nxt)) {
+        yylval.str = sdup("_");
+        prev_char = '_';
+        return TEXT;
+    }
+    return take_delim(&under_open, "_", "_", UNDER);
+}
+<INLINE,TABLE>"~~" {
+    int nxt = input();
+    if (nxt != EOF)
+        unput((unsigned char)nxt);
+    /* ~~~ is fence-ish literal in prose, not strike opener. */
+    if (!tilde2_open && nxt == '~') {
+        yylval.str = sdup("~~");
+        note_text("~~");
+        return TEXT;
+    }
+    return take_delim(&tilde2_open, "~~", "~~", TILDE2);
+}
 
 <INLINE,TABLE>{TICKS} {
     tick_len = yyleng;
@@ -450,49 +512,58 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
     BEGIN(IN_TICKS);
 }
 
-<INLINE,TABLE>"!["                     { yyless(1); return BANG; }
+<INLINE,TABLE>"!["                     { yyless(1); prev_char = '!'; return BANG; }
 <INLINE,TABLE>"[" {
-    if (line_ahead_has("]("))
+    if (line_ahead_has("](")) {
+        prev_char = '[';
         return LBRACK;
+    }
     yylval.str = sdup("[");
+    prev_char = '[';
     return TEXT;
 }
-<INLINE,TABLE>"]"                      { return RBRACK; }
-<INLINE,TABLE>"("                      { return LPAREN; }
-<INLINE,TABLE>")"                      { return RPAREN; }
+<INLINE,TABLE>"]"                      { prev_char = ']'; return RBRACK; }
+<INLINE,TABLE>"("                      { prev_char = '('; return LPAREN; }
+<INLINE,TABLE>")"                      { prev_char = ')'; return RPAREN; }
 <INLINE,TABLE>{AUTOLINK_ANGLE} {
     yylval.str = sdup(yytext + 1);
     yylval.str[strlen(yylval.str) - 1] = '\0';
+    note_text(yylval.str);
     return AUTOLINK;
 }
 <INLINE,TABLE>{AUTOLINK_BARE} {
     yylval.str = sdup(yytext);
+    note_text(yytext);
     return AUTOLINK;
 }
-<INLINE,TABLE>"<"                      { return LT; }
-<INLINE,TABLE>">"                      { return GT; }
+<INLINE,TABLE>"<"                      { prev_char = '<'; return LT; }
+<INLINE,TABLE>">"                      { prev_char = '>'; return GT; }
 
-<TABLE>"|"                             { return PIPE; }
+<TABLE>"|"                             { prev_char = '|'; return PIPE; }
 
 <INLINE,TABLE>{PLAIN_TEXT} {
     yylval.str = sdup(yytext);
+    note_text(yytext);
     return TEXT;
 }
 
 <INLINE>"|" {
     yylval.str = sdup("|");
+    prev_char = '|';
     return TEXT;
 }
 
 <INLINE,TABLE>. {
     char tmp[2] = { yytext[0], '\0' };
     yylval.str = sdup(tmp);
+    prev_char = (unsigned char)yytext[0];
     return TEXT;
 }
 
 <IN_TICKS>{TICKS} {
     if (yyleng == tick_len) {
         yylval.str = sbuf_take();
+        note_text(yylval.str);
         BEGIN(saved_state);
         return CODE_SPAN;
     }
@@ -527,6 +598,7 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 <INLINE,TABLE><<EOF>> {
     if (!eof_newline_sent) {
         eof_newline_sent = 1;
+        prev_char = '\n';
         BEGIN(LINE_START);
         return NEWLINE;
     }
@@ -536,6 +608,58 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 <LINE_START><<EOF>>                    { return 0; }
 
 %%
+
+/* Reset start condition and EOF helpers so yyparse can run on another file. */
+void lex_reset(void)
+{
+    BEGIN(LINE_START);
+    fence_len = 0;
+    fence_delim = 0;
+    tick_len = 0;
+    saved_state = 0;
+    eof_newline_sent = 0;
+    eof_fence_closed = 0;
+    prev_char = '\n';
+    reset_inline_delims();
+    sbuf_clear();
+    yylineno = 1;
+}
+
+static void note_text(const char *s)
+{
+    if (s && s[0])
+        prev_char = (unsigned char)s[strlen(s) - 1];
+    else
+        prev_char = '\n';
+}
+
+static int word_char(int c)
+{
+    return c != EOF && (isalnum((unsigned char)c) || c == '_');
+}
+
+static void reset_inline_delims(void)
+{
+    star_open = star2_open = star3_open = 0;
+    under_open = under2_open = tilde2_open = 0;
+}
+
+static int take_delim(int *open_flag, const char *lit, const char *close_pat, int tok)
+{
+    if (*open_flag) {
+        *open_flag = 0;
+        prev_char = (unsigned char)lit[strlen(lit) - 1];
+        return tok;
+    }
+    if (line_ahead_has(close_pat)) {
+        *open_flag = 1;
+        prev_char = (unsigned char)lit[0];
+        return tok;
+    }
+    yylval.str = sdup(lit);
+    note_text(lit);
+    return TEXT;
+}
 
 static int line_ahead_has(const char *pat)
 {

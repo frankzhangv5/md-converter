@@ -52,7 +52,7 @@
 - 输出完整 HTML（doctype、charset、viewport、`body.md-body`、`#md-article`）
 - 统一 `type → tag + md-* class`（见 003 映射表）
 - 源文 HTML 转义；磁盘 HTML **不**预写内联 `style=`，便于换肤
-- 主题：内置 `gfm` / `teal` / `vermillion`（`--theme`）；`--css` 可读外部 CSS。样式与 `highlight.js` / `copy-wechat.js` 均**内联**进 HTML，二进制自包含
+- 主题：内置 `gfm` / `teal` / `vermillion` / `azure` / `lime` / `jade` / `tangerine`（`--theme`）；`--css` 可读外部 CSS。样式与 `highlight.js` / `copy-wechat.js` 均**内联**进 HTML，二进制自包含
 - 可选代码高亮（围栏 `md-tok-*`）；`--no-highlight` 关闭
 
 ### 004 — 复制到微信公众号
@@ -68,12 +68,14 @@
 ```bash
 # Linux / macOS
 cd converter && make
-./build/md-convert input.md -o out.html --theme gfm
+./build/md-convert input.md -o outdir --theme gfm
+./build/md-convert -d docs -o site --theme gfm
 
 # Windows（MSYS2）
 cd converter
 powershell -ExecutionPolicy Bypass -File build.ps1
-.\build\md-convert.exe input.md -o out.html --theme gfm
+.\build\md-convert.exe input.md -o outdir --theme gfm
+.\build\md-convert.exe -d docs -o site --theme gfm
 ```
 
 浏览器打开生成的 HTML 即可预览；右下角可复制到公众号编辑器。更多选项与 class 一览见 [converter/README.md](converter/README.md)。

@@ -1,4 +1,4 @@
-/* Custom GFM theme — style via md-* classes from spec 003. */
+/* lime — GFM layout with accent #006B33 (deep green). Fence uses Visual Studio Dark. */
 
 .md-body {
   max-width: 48rem;
@@ -20,14 +20,15 @@
   margin: 1.6em 0 0.6em;
   line-height: 1.25;
   font-weight: 650;
+  color: #006b33;
 }
 
-.md-h1 { font-size: 2rem; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
-.md-h2 { font-size: 1.5rem; border-bottom: 1px solid #d0d7de; padding-bottom: 0.3em; }
+.md-h1 { font-size: 2rem; border-bottom: 1px solid #9bc9ad; padding-bottom: 0.3em; }
+.md-h2 { font-size: 1.5rem; border-bottom: 1px solid #9bc9ad; padding-bottom: 0.3em; }
 .md-h3 { font-size: 1.25rem; }
 .md-h4 { font-size: 1.1rem; }
 .md-h5 { font-size: 1rem; }
-.md-h6 { font-size: 0.9rem; color: #656d76; }
+.md-h6 { font-size: 0.9rem; color: #338f5c; }
 
 .md-p {
   margin: 0.85em 0;
@@ -40,7 +41,7 @@
 }
 
 .md-a {
-  color: #0969da;
+  color: #006b33;
   text-decoration: none;
 }
 
@@ -55,7 +56,8 @@
 .md-code {
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   font-size: 0.9em;
-  background: #f6f8fa;
+  color: #006b33;
+  background: #e8f3ec;
   padding: 0.15em 0.4em;
   border-radius: 4px;
 }
@@ -110,9 +112,9 @@
 .md-blockquote {
   margin: 1em 0;
   padding: 0.2em 1em;
-  border-left: 4px solid #d0d7de;
+  border-left: 4px solid #006b33;
   color: #656d76;
-  background: #f6f8fa;
+  background: rgba(0, 107, 51, 0.06);
 }
 
 .md-ul,
@@ -131,6 +133,7 @@
 .md-checkbox {
   margin-right: 0.45em;
   vertical-align: middle;
+  accent-color: #006b33;
 }
 
 .md-img {
@@ -147,11 +150,11 @@
   display: table;
 }
 
-.md-thead { background: #f6f8fa; }
+.md-thead { background: #e8f3ec; }
 
 .md-th,
 .md-td {
-  border: 1px solid #d0d7de;
+  border: 1px solid #9bc9ad;
   padding: 0.45em 0.8em;
 }
 
@@ -163,6 +166,6 @@
 
 .md-hr {
   border: 0;
-  border-top: 1px solid #d0d7de;
+  border-top: 1px solid #9bc9ad;
   margin: 1.6em 0;
 }

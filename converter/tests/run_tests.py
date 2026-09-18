@@ -13,8 +13,8 @@ FIXTURES = ROOT / "tests" / "fixtures"
 
 
 def run(md: Path, extra: list[str] | None = None) -> str:
-    out = BUILD / f"_test_{md.stem}.html"
-    cmd = [str(BIN), str(md), "-o", str(out)]
+    out = BUILD / f"{md.stem}.html"
+    cmd = [str(BIN), str(md), "-o", str(BUILD)]
     if extra:
         cmd.extend(extra)
     r = subprocess.run(
@@ -66,6 +66,26 @@ def main() -> None:
         raise SystemExit("__bold__ did not become strong")
     if "embed<em" in under:
         raise SystemExit("underscore inside path opened emphasis")
+
+    edge = run(FIXTURES / "inline_edge.md")
+    if "UL_MARK" not in edge or "block_image" not in edge:
+        raise SystemExit("CJK-adjacent snake_case mangled")
+    if "md-*" not in edge or "html_*" not in edge:
+        raise SystemExit("unpaired markers not kept as text")
+    # Only the Keep line should contain emphasis/del from markers.
+    unpaired_para = edge
+    if "md-<em" in unpaired_para or "html<em" in unpaired_para:
+        raise SystemExit("unpaired * opened emphasis")
+    if '<del class="md-del">del</del>' not in edge:
+        raise SystemExit("~~del~~ did not become del")
+    if "~~~" not in edge:
+        raise SystemExit("loose ~~~ was eaten")
+
+    li_hb = run(FIXTURES / "list_hardbreak.md")
+    if "md-ol" not in li_hb or "md-li" not in li_hb:
+        raise SystemExit("list with hardbreak missing ol/li")
+    if "trailing spaces end item" not in li_hb or "next item" not in li_hb:
+        raise SystemExit("hardbreak list items missing text")
 
     indented = run(FIXTURES / "indented_code.md")
     if "md-pre" not in indented or "md-code-block" not in indented:
@@ -152,8 +172,17 @@ def main() -> None:
     teal = run(FIXTURES / "sample.md", ["--theme", "teal"])
     if "#009688" not in teal:
         raise SystemExit("--theme teal did not inline teal.css")
+    for name, swatch in (
+        ("azure", "#415fff"),
+        ("lime", "#006b33"),
+        ("jade", "#07c160"),
+        ("tangerine", "#ff6a00"),
+    ):
+        themed = run(FIXTURES / "sample.md", ["--theme", name])
+        if swatch not in themed:
+            raise SystemExit(f"--theme {name} did not inline {name}.css")
     bad = subprocess.run(
-        [str(BIN), str(FIXTURES / "sample.md"), "-o", str(BUILD / "_bad.html"), "--theme", "nope"],
+        [str(BIN), str(FIXTURES / "sample.md"), "-o", str(BUILD), "--theme", "nope"],
         check=False,
         capture_output=True,
         text=True,
@@ -187,15 +216,55 @@ def main() -> None:
         cwd=ROOT,
     )
     if r.returncode != 0:
-        raise SystemExit(f"default -o path failed ({r.returncode}):\n{r.stderr}")
-    if r.stdout.strip():
-        raise SystemExit("default output wrote to stdout; expected sidecar .html")
+        raise SystemExit(f"default output path failed ({r.returncode}):\n{r.stderr}")
+    if "<!DOCTYPE" in r.stdout or "<html" in r.stdout.lower():
+        raise SystemExit("default output wrote HTML to stdout; expected sidecar .html")
+    if "md-convert: ok:" not in r.stdout:
+        raise SystemExit("expected success status on stdout")
     if not default_out.is_file():
         raise SystemExit("default output missing empty.html next to empty.md")
     default_html = default_out.read_text(encoding="utf-8")
     default_out.unlink(missing_ok=True)
     if "<!DOCTYPE html>" not in default_html:
         raise SystemExit("default sidecar HTML incomplete")
+
+    batch_dir = BUILD / "_batch_in"
+    batch_out = BUILD / "_batch_out"
+    if batch_dir.exists():
+        for p in batch_dir.iterdir():
+            p.unlink()
+        batch_dir.rmdir()
+    if batch_out.exists():
+        for p in batch_out.iterdir():
+            p.unlink()
+        batch_out.rmdir()
+    batch_dir.mkdir(parents=True)
+    (batch_dir / "a.md").write_text("# A\n", encoding="utf-8")
+    (batch_dir / "b.md").write_text("# B\n", encoding="utf-8")
+    (batch_dir / "skip.txt").write_text("nope\n", encoding="utf-8")
+    r = subprocess.run(
+        [str(BIN), "-d", str(batch_dir), "-o", str(batch_out)],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=ROOT,
+    )
+    if r.returncode != 0:
+        raise SystemExit(f"-d batch failed ({r.returncode}):\n{r.stderr}")
+    if not (batch_out / "a.html").is_file() or not (batch_out / "b.html").is_file():
+        raise SystemExit("-d/-o did not write expected HTML files")
+    if (batch_out / "skip.html").exists():
+        raise SystemExit("-d converted non-markdown file")
+    a_html = (batch_out / "a.html").read_text(encoding="utf-8")
+    if "<h1 class=\"md-h1\">A</h1>" not in a_html:
+        raise SystemExit("-d batch HTML content wrong")
+    for p in batch_dir.iterdir():
+        p.unlink()
+    batch_dir.rmdir()
+    for p in batch_out.iterdir():
+        p.unlink()
+    batch_out.rmdir()
 
     print("ok")
 
