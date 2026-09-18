@@ -56,6 +56,7 @@ Bison `%token` 必须与下表一致。
 | `BLOCKQUOTE` | 行首 `>` |
 | `UL_MARK` | 行首 `*` / `-` / `+` + 空白 |
 | `OL_MARK` | 行首 `digits.` 或 `digits)` + 空白 |
+| `LIST_CONT` | 列表项之后、缩进 1–3 空格的续行（不是新的块标记） |
 | `TASK_MARK` | 列表标记后的 `[ ]` / `[x]` / `[X]` |
 | `FENCE_OPEN` / `FENCE_CLOSE` | 行首 ≥3 的 `` ` `` 或 `~`，可带 info string |
 | `INDENT_CODE_LINE` | 行首 ≥4 空格或 tab（CommonMark 缩进代码行；去掉一层缩进后的原文） |

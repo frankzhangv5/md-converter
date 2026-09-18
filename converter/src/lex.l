@@ -15,6 +15,8 @@ static int tick_len;
 static int saved_state;
 static int eof_newline_sent;
 static int eof_fence_closed;
+/* After UL_MARK/OL_MARK: indented (1–3 spaces) lines are list continuation. */
+static int after_list;
 /* Last char of previous inline token; used for word-internal '_' flanking. */
 static int prev_char = '\n';
 /* Unmatched inline delimiter opens on the current line (closer bypasses lookahead). */
@@ -248,9 +250,10 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 
 %%
 
-<LINE_START>{SPACES}{NL}               { return BLANK; }
+<LINE_START>{SPACES}{NL}               { after_list = 0; return BLANK; }
 
 <LINE_START>{FENCE_TICKS} {
+    after_list = 0;
     fence_delim = '`';
     fence_len = count_char(yytext, '`');
     yylval.fence.delim = '`';
@@ -261,6 +264,7 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 }
 
 <LINE_START>{FENCE_TILDES} {
+    after_list = 0;
     fence_delim = '~';
     fence_len = count_char(yytext, '~');
     yylval.fence.delim = '~';
@@ -271,55 +275,68 @@ PLAIN_TEXT      [^\r\n\\`*_~\[\]()!<>| ]+
 }
 
 <LINE_START>{TABLE_SEP_LINE} {
+    after_list = 0;
     yylval.str = parse_aligns(yytext);
     return TABLE_SEP;
 }
 
-<LINE_START>{HR_STAR}                  { return HR; }
-<LINE_START>{HR_DASH}                  { return HR; }
-<LINE_START>{HR_UNDER}                 { return HR; }
+<LINE_START>{HR_STAR}                  { after_list = 0; return HR; }
+<LINE_START>{HR_DASH}                  { after_list = 0; return HR; }
+<LINE_START>{HR_UNDER}                 { after_list = 0; return HR; }
 
 <LINE_START>{ATX_SPACED} {
+    after_list = 0;
     yylval.num = atx_level(yytext);
     BEGIN(INLINE);
     return ATX;
 }
 
 <LINE_START>{ATX_HASHES}/{NL} {
+    after_list = 0;
     yylval.num = atx_level(yytext);
     BEGIN(INLINE);
     return ATX;
 }
 
-<LINE_START>{BLOCKQUOTE_MARK}          { return BLOCKQUOTE; }
+<LINE_START>{BLOCKQUOTE_MARK}          { after_list = 0; return BLOCKQUOTE; }
 
 <LINE_START>{UL_MARK_PAT} {
+    after_list = 1;
     BEGIN(AFTER_LIST);
     return UL_MARK;
 }
 
 <LINE_START>{OL_MARK_PAT} {
+    after_list = 1;
     BEGIN(AFTER_LIST);
     return OL_MARK;
 }
 
-<LINE_START>{INDENT}/\|                { BEGIN(TABLE); }
+<LINE_START>{INDENT}/\|                { after_list = 0; BEGIN(TABLE); }
 
 <LINE_START>{IC_LINE} {
+    after_list = 0;
     yylval.str = indent_code_text(yytext);
     BEGIN(INDENT_CODE);
     return INDENT_CODE_LINE;
 }
 
 <LINE_START>{IC_EOF} {
+    after_list = 0;
     yylval.str = indent_code_text(yytext);
     BEGIN(INDENT_CODE);
     return INDENT_CODE_LINE;
 }
 
-<LINE_START>{INDENT1_3}                { /* skip up to 3 spaces */ }
+<LINE_START>{INDENT1_3} {
+    if (after_list) {
+        BEGIN(INLINE);
+        return LIST_CONT;
+    }
+    /* skip up to 3 spaces */
+}
 
-<LINE_START>.                          { yyless(0); BEGIN(INLINE); }
+<LINE_START>.                          { yyless(0); after_list = 0; BEGIN(INLINE); }
 
 <INDENT_CODE>{IC_LINE} {
     yylval.str = indent_code_text(yytext);
@@ -619,6 +636,7 @@ void lex_reset(void)
     saved_state = 0;
     eof_newline_sent = 0;
     eof_fence_closed = 0;
+    after_list = 0;
     prev_char = '\n';
     reset_inline_delims();
     sbuf_clear();

@@ -20,8 +20,8 @@ extern int yylineno;
 
 %define parse.error verbose
 
-/* Paragraph continuation vs next block; indent code line+; link ']' vs atom. Default shift is correct. */
-%expect 22
+/* Paragraph continuation vs next block; blanks inside a list; indent code; link ']'. Default shift is correct. */
+%expect 24
 
 %union {
     char *str;
@@ -29,7 +29,7 @@ extern int yylineno;
     Fence fence;
 }
 
-%token NEWLINE BLANK HARD_BREAK
+%token NEWLINE BLANK HARD_BREAK LIST_CONT
 %token <str> TEXT ESCAPE AUTOLINK FENCE_LINE INDENT_CODE_LINE CODE_SPAN TABLE_SEP
 %token <num> ATX TASK_MARK
 %token <fence> FENCE_OPEN
@@ -43,6 +43,7 @@ extern int yylineno;
 %type <str> heading paragraph para_body
 %type <str> ul_list ul_items ul_item
 %type <str> ol_list ol_items ol_item
+%type <str> li_body li_rest
 %type <str> blockquote bq_lines bq_line
 %type <str> fence fence_body indent_code indent_code_lines
 %type <str> table table_rows table_row cells opt_inlines
@@ -117,29 +118,18 @@ ul_list
 ul_items
     : ul_item
     | ul_items ul_item { $$ = str_concat($1, $2); }
+    | ul_items BLANK { $$ = $1; }
     ;
 
 ul_item
-    : UL_MARK inlines NEWLINE {
+    : UL_MARK li_body {
         $$ = html_tag("li", $2);
         free($2);
       }
-    | UL_MARK inlines HARD_BREAK {
-        char *inner = str_concat($2, html_void("br", NULL));
-        $$ = html_tag("li", inner);
-        free(inner);
-      }
-    | UL_MARK TASK_MARK inlines NEWLINE {
+    | UL_MARK TASK_MARK li_body {
         char *inner = str_concat_sep(html_checkbox($2), " ", $3);
         $$ = html_tag("task_item", inner);
         free(inner);
-      }
-    | UL_MARK TASK_MARK inlines HARD_BREAK {
-        char *inner = str_concat_sep(html_checkbox($2), " ", $3);
-        char *with_br = str_concat(inner, html_void("br", NULL));
-        $$ = html_tag("task_item", with_br);
-        free(inner);
-        free(with_br);
       }
     | UL_MARK NEWLINE {
         $$ = html_tag("li", "");
@@ -156,35 +146,52 @@ ol_list
 ol_items
     : ol_item
     | ol_items ol_item { $$ = str_concat($1, $2); }
+    | ol_items BLANK { $$ = $1; }
     ;
 
 ol_item
-    : OL_MARK inlines NEWLINE {
+    : OL_MARK li_body {
         $$ = html_tag("li", $2);
         free($2);
       }
-    | OL_MARK inlines HARD_BREAK {
-        char *inner = str_concat($2, html_void("br", NULL));
-        $$ = html_tag("li", inner);
-        free(inner);
-      }
-    | OL_MARK TASK_MARK inlines NEWLINE {
+    | OL_MARK TASK_MARK li_body {
         char *inner = str_concat_sep(html_checkbox($2), " ", $3);
         $$ = html_tag("task_item", inner);
         free(inner);
-      }
-    | OL_MARK TASK_MARK inlines HARD_BREAK {
-        char *inner = str_concat_sep(html_checkbox($2), " ", $3);
-        char *with_br = str_concat(inner, html_void("br", NULL));
-        $$ = html_tag("task_item", with_br);
-        free(inner);
-        free(with_br);
       }
     | OL_MARK NEWLINE {
         $$ = html_tag("li", "");
       }
     | OL_MARK HARD_BREAK {
         $$ = html_tag("li", "");
+      }
+    ;
+
+li_body
+    : inlines NEWLINE { $$ = $1; }
+    | inlines HARD_BREAK {
+        $$ = str_concat($1, html_void("br", NULL));
+      }
+    | inlines NEWLINE li_rest {
+        $$ = str_concat_sep($1, " ", $3);
+      }
+    | inlines HARD_BREAK li_rest {
+        char *inner = str_concat($1, html_void("br", NULL));
+        $$ = str_concat(inner, $3);
+      }
+    ;
+
+li_rest
+    : LIST_CONT inlines NEWLINE { $$ = $2; }
+    | LIST_CONT inlines HARD_BREAK {
+        $$ = str_concat($2, html_void("br", NULL));
+      }
+    | li_rest LIST_CONT inlines NEWLINE {
+        $$ = str_concat_sep($1, " ", $3);
+      }
+    | li_rest LIST_CONT inlines HARD_BREAK {
+        char *inner = str_concat($1, html_void("br", NULL));
+        $$ = str_concat(inner, $3);
       }
     ;
 

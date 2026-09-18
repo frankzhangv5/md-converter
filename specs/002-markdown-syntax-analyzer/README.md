@@ -33,7 +33,7 @@ block        → heading | paragraph | list | blockquote
              | fence | indent_code | table | hr | blank
 heading      → ATX inline NEWLINE
 paragraph    → inlines NEWLINE
-list         → list_item+
+list         → list_item+（项间可夹空行；项内可懒续行）
 blockquote   → BLOCKQUOTE blocks（续行规则可简化：每行都要有 >）
 fence        → FENCE_OPEN fence_body FENCE_CLOSE
 indent_code  → INDENT_CODE_LINE+
@@ -87,7 +87,7 @@ ul: list_items {
 | 缩进代码块（≥4 空格/tab） | 是 | CommonMark；无语言；HTML 同围栏 |
 | 链接 `[text](url)`、图片 `![alt](url)` | 是 | |
 | 自动链接 | 是 | |
-| 无序/有序列表、任务列表 | 是 | GFM task |
+| 无序/有序列表、任务列表 | 是 | GFM task；同类型项之间空行仍为同一列表 |
 | 引用 | 是 | 嵌套 `>` 可做一层或多层 |
 | 表格 | 是 | GFM；对齐信息写入 class 或 style，见 003 |
 | 水平线 | 是 | |
@@ -114,7 +114,7 @@ ul: list_items {
 - [x] 块：标题、段落、HR、引用、列表、任务列表、围栏
 - [x] 行内：em/strong/strike/code/link/image/autolink
 - [x] 表格
-- [x] 处理 shift/reduce；`%expect 21`（段落续行 vs 下一块；默认 shift）
+- [x] 处理 shift/reduce；`%expect 24`（段落续行 vs 下一块；列表项间空行；默认 shift）
 
 ## Test
 
@@ -129,6 +129,7 @@ ul: list_items {
 Markdown 不是干净的 CFG。实现用词法状态 + 简化续行。v1 限制：
 
 - 强调不嵌套（`**a *b* c**` 的内层 `*` 不是 em）
-- 列表项之间空行会结束当前列表
+- 同类型列表项之间的空行不结束列表（松散列表仍包在同一个 `ul`/`ol` 里）；中间插入其它块或换列表类型则结束当前列表
+- 列表项允许懒续行：标记行之后的普通文本行并入该项（硬换行保留 `br`）
 - 未配对的 `*` / `**` 可能导致 parse error
 - 表格行需以 `|` 开头

@@ -87,6 +87,19 @@ def main() -> None:
     if "trailing spaces end item" not in li_hb or "next item" not in li_hb:
         raise SystemExit("hardbreak list items missing text")
 
+    loose = run(FIXTURES / "loose_ol.md")
+    if loose.count("<ol class=\"md-ol\">") != 1:
+        raise SystemExit("loose ordered list split into multiple ol:\n" + loose)
+    if loose.count("<li class=\"md-li\">") != 4:
+        raise SystemExit("loose ordered list should have 4 li:\n" + loose)
+    for needle in ("Setext", "参考式链接", "原始 HTML", "脚注", "continuation of first item",
+                   "continuation of fourth item"):
+        if needle not in loose:
+            raise SystemExit(f"loose ordered list missing {needle!r}")
+    # Continuation belongs inside <li>, not a sibling paragraph between items.
+    if "</ol>" in loose.split("continuation of first item")[0]:
+        raise SystemExit("first item continuation escaped the list")
+
     indented = run(FIXTURES / "indented_code.md")
     if "md-pre" not in indented or "md-code-block" not in indented:
         raise SystemExit("indented code missing pre/code_block")
